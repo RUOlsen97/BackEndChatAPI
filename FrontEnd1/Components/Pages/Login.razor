@@ -1,0 +1,372 @@
+﻿@rendermode InteractiveServer
+@page "/login"
+@* @using Blazored.SessionStorage
+@using FrontEnd1.Components.Account
+@using System.Security.Claims
+@using System.Text.Json
+@using System.IdentityModel.Tokens.Jwt
+@using Newtonsoft.Json.Linq *@
+@using Blazored.SessionStorage
+@using FrontEnd1.Components.Account;
+@using FrontEnd1.Components.Models;
+@using FrontEnd1.Components.Services;
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
+@inject IAuthorizationService AuthorizationService
+
+@* @inject ILogger<Login> Logger;*@
+@inject NavigationManager Navigation;
+@inject IdentityRedirectManager redirectmanager;
+@inject ISessionStorageService sessionStorage;
+@inject IJSRuntime JS
+@inject IHttpClientFactory factory;
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@* @inject CustomAuthStateProvider AuthenticationStateProvider *@
+@* @inject AuthenticationService authService; *@
+
+@inject IAuthenticationService AuthenticationService;
+
+<fieldset disabled="@(expiration is not null)">
+    <EditForm Model="@model" OnValidSubmit="SubmitAsync" FormName="login">
+        <div>
+            <label for="email">Username:</label>
+            <InputText @bind-Value="@Email" id="email" name="email" required />
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <InputText type="password" @bind-Value="@Password" id="password" name="password" required />
+        </div>
+        <div>
+            <button type="submit">Login</button>
+        </div>
+    </EditForm>
+</fieldset>
+
+@* <AuthorizeView>
+    <Authorized>
+        <p>Hello, @Email!</p>
+    </Authorized>
+    <NotAuthorized>
+        <p>You're not authorized.</p>
+    </NotAuthorized>
+</AuthorizeView> *@
+@* @if (( AuthorizationService.AuthorizeAsync(User, "PolicyName")).Succeeded)
+{
+    <p>This paragraph is displayed because you fulfilled PolicyName.</p>
+} *@
+
+@if (_token is not null)
+{
+    <span>Welcome @Email <a @onclick="LogOutAsync">LogOut</a></span>
+    <PageTitle>Profile</PageTitle>
+
+    <div class="form-group">
+        <label>
+            User:
+            <span>@Email</span>
+        </label>
+    </div>
+    <div class="form-group">
+        <label>
+            Message:
+            <input @bind="messageInput" size="50" />
+        </label>
+    </div>
+    <button @onclick="Send" disabled="@(!IsConnected)">Send</button>
+
+    <hr>
+
+    <ul id="messagesList">
+        @foreach (var message in messages)
+        {
+            <li>@message</li>
+        }
+    </ul>
+}
+
+@if (errorMessage is not null)
+{
+    <p class="error">@errorMessage</p>
+}
+
+@code 
+{
+    public string userIdentifier = string.Empty;
+    public string? errorMessage;
+    private const string JWT_Key = nameof(JWT_Key);
+    private const string REFRESH_KEY = nameof(REFRESH_KEY);
+    // private string? _jwtCache;
+    private DateTime? expiration;
+    private bool Authenticated = false;
+    [Inject]
+    private IJSRuntime JsRuntime { get; set; } = null!;
+
+    [SupplyParameterFromForm]
+    public string? Email { get; set; }
+    [SupplyParameterFromForm]
+    public string? Password { get; set; }
+    private bool buttonPressed = false;
+    public string _token;
+
+    private LoginModel model = new LoginModel();
+
+
+
+    private async Task SubmitAsync()
+    {
+        // await JsRuntime.InvokeVoidAsync("LoginAsync", Email, Password);
+
+        expiration = await AuthenticationService.LoginAsync(this.Email, this.Password);
+        errorMessage = null;
+        await AuthenticationService.Authenticate(Authenticated);
+        buttonPressed = true;
+
+        // ((CustomAuthStateProvider)AuthenticationStateProvider)
+        //     .AuthenticateUser(userIdentifier);
+        StateHasChanged();
+        // Navigation.NavigateTo("/Profile");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool buttonPressed)
+    {
+        if ( buttonPressed)
+        {
+            // await AuthenticationService.GetUsername(email);
+            //await sessionStorage.SetItemAsync(JWT_Key, haha);
+            _token = await sessionStorage.GetItemAsync<string>(JWT_Key);
+
+            buttonPressed = false;
+        }
+    }
+    private HubConnection? hubConnection;
+    private List<string> messages = new List<string>();
+    private string? username;
+    private string? userInput;
+    private bool isLoggedIn = true;
+    private string? messageInput;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7222/chathub")
+            .Build();
+
+        hubConnection.On<string, string>("ReceiveMessage", (Email, message) =>
+        {
+            var encodedMsg = $"{Email}: {message}";
+            messages.Add(encodedMsg);
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+    }
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+    //         var jwtToken = await sessionStorage.GetItemAsync<string>(JWT_Key);
+    //         isLoggedIn = !string.IsNullOrWhiteSpace(jwtToken);
+    //         StateHasChanged();
+    //     }
+    // }
+    private async Task LogOutAsync()
+    {
+        await AuthenticationService.LogoutAsync();
+    }
+
+    private async Task Send()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("SendMessage", Email, messageInput);
+        }
+    }
+
+    public bool IsConnected =>
+        hubConnection?.State == HubConnectionState.Connected;
+
+    private string? authMessage;
+    private string? surname;
+    // private IEnumerable<Claim> claims = Enumerable.Empty<Claim>();
+
+    // private async Task GetClaimsPrincipalData()
+    // {
+    //     var authState = await AuthenticationStateProvider
+    //         .GetAuthenticationStateAsync();
+    //     var user = authState.User;
+
+    //     if (user.Identity is not null && user.Identity.IsAuthenticated)
+    //     {
+    //         authMessage = $"{user.Identity.Name} is authenticated.";
+    //         claims = user.Claims;
+    //         surname = user.FindFirst(c => c.Type == ClaimTypes.Surname)?.Value;
+    //     }
+    //     else
+    //     {
+    //         authMessage = "The user is NOT authenticated.";
+    //     }
+    // }
+
+
+    // , options =>
+    //     {
+    //         options.AccessTokenProvider = () => Task.FromResult(_myAccessToken);
+    //     }
+
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+
+    //         await SubmitAsync();
+    //     }
+    //     await base.OnAfterRenderAsync(firstRender);
+    // }
+
+    // private string? authMessage;
+    // private string? surname;
+    // private IEnumerable<Claim> claims = Enumerable.Empty<Claim>();
+
+    // private async Task GetClaimsPrincipalData()
+    // {
+    //     var authState = await AuthenticationStateProvider
+    //         .GetAuthenticationStateAsync();
+    //     var user = authState.User;
+
+    //     if (user.Identity is not null && user.Identity.IsAuthenticated)
+    //     {
+    //         authMessage = $"{user.Identity.Name} is authenticated.";
+    //         claims = user.Claims;
+    //         surname = user.FindFirst(c => c.Type == ClaimTypes.Surname)?.Value;
+    //     }
+    //     else
+    //     {
+    //         authMessage = "The user is NOT authenticated.";
+    //     }
+    // }
+    
+
+    // public event Action<string?>? Loginchange;
+
+    // private static string GetUsername(string token)
+    // {
+    //     var jwt = new JwtSecurityToken(token);
+    //     return jwt.Claims.First(c => c.Type == ClaimTypes.Email).Value;
+    // }
+
+    // [SupplyParameterFromForm]
+    // public string? Email { get; set; }
+    // [SupplyParameterFromForm]
+    // public string? Password { get; set; }
+
+
+
+    // public LoginModel(string email, string password)
+    // {
+    //     this.Email = email;
+    //     this.Password = password;
+    // };
+
+    // private DateTime? expiration;
+
+    // private async Task SubmitAsync()
+    // {
+
+    //     var client = new HttpClient();
+
+    //     var uri = new Uri("https://localhost:7222/login");
+
+    //     var json = $"{{\"email\":\"{Email}\",\"password\":\"{Password}\", \"twoFactorCode\": \"string\",\"twoFactorRecoveryCode\": \"string\"}}";
+    //     var content = new StringContent(json, Encoding.UTF8, "application/json");
+    //     var response = await client.PostAsync(uri, content);
+
+    //     if (!response.IsSuccessStatusCode)
+    //     {
+    //         throw new UnauthorizedAccessException("Login failed");
+        //     }
+
+    //     var contentfromresponse = await response.Content.ReadAsStringAsync();
+    //     JObject jsonresponse = JObject.Parse(contentfromresponse);
+    //     if (contentfromresponse == null)
+    //     {
+    //         throw new InvalidDataException();
+    //     }
+    //     string accesstoken = jsonresponse["accessToken"].ToString();
+    //     string refreshtoken = jsonresponse["refreshToken"].ToString();
+    //     string expiresIn = jsonresponse["expiresIn"].ToString();
+    //     if (DateTime.TryParse(expiresIn, out DateTime result))
+    //     {
+    //         Console.WriteLine(result);
+        //     }
+
+    //     await sessionStorageService.SetItemAsync<string>(JWT_Key, accesstoken);
+    //     await sessionStorageService.SetItemAsync<string>(REFRESH_KEY, refreshtoken);
+    //     Console.WriteLine(result);
+
+    //         // Udfør yderligere JavaScript-interoperabilitet her, hvis nødvendigt
+
+    //     // Loginchange?.Invoke(GetUsername());  
+    // }
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     // Dette kald udføres kun ved den første rendring på klienten.
+    //     // Du kan udføre yderligere JavaScript-interoperabilitet her, hvis nødvendigt.
+    //     if (firstRender)
+    //     {
+    //         // Dette kald udføres kun ved den første rendring på klienten.
+    //         // Du kan udføre yderligere JavaScript-interoperabilitet her, hvis nødvendigt.
+    //         await SubmitAsync();
+        //     }
+
+    // }
+
+    // private sealed class LoginModel
+    // {
+    //     [Required]
+    //     [EmailAddress]
+    //     public string Email { get; set; } = "";
+
+    //     [Required]
+    //     [DataType(DataType.Password)]
+    //     public string Password { get; set; } = "";
+
+    // }
+    // [CascadingParameter]
+    // private bool _authenticationState {get; set;}
+    // [SupplyParameterFromForm]
+    // public string? useremail { get; set; }
+    // [SupplyParameterFromForm]
+    // public string? userpassword { get; set; }
+
+
+
+    // public async Task login()
+    // {
+
+    //     var client = new HttpClient();
+
+    //     var uri = new Uri("https://localhost:7222/login");
+
+    //     var json = $"{{\"email\":\"{useremail}\",\"password\":\"{userpassword}\", \"twoFactorCode\": \"string\",\"twoFactorRecoveryCode\": \"string\"}}";
+    //     var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+    //     using HttpResponseMessage response = await client.PostAsync(uri, content);
+    //     if (response.IsSuccessStatusCode)
+    //     {
+    //         string responsebody = await response.Content.ReadAsStringAsync();
+    //         _authenticationState = true;
+
+    //         redirectmanager.RedirectTo("/Profile");
+
+    //     }
+    //     else
+    //     {
+    //         Console.WriteLine($"Error: {response.StatusCode}");
+        //     }
+
+    // }
+    // public async Task Main(string[] args) => await login();
+
+}

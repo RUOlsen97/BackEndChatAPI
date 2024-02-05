@@ -1,0 +1,106 @@
+﻿@rendermode InteractiveServer
+@page "/Profile"
+@using Blazored.SessionStorage
+@using FrontEnd1.Components.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.VisualBasic
+@inject NavigationManager Navigation
+@* @implements IAsyncDisposable *@
+@inject IJSRuntime JS
+@inject IAuthenticationService _AuthenticationService;
+@inject ISessionStorageService sessionStorage;
+@attribute [Authorize(Policy = "LoggedIn")]
+
+
+<span>Welcome User <a @onclick="LogOutAsync">LogOut</a></span>
+<PageTitle>Profile</PageTitle>
+
+<div class="form-group">
+    <label>
+        User:
+        <input @bind="userInput" />
+    </label>
+</div>
+<div class="form-group">
+    <label>
+        Message:
+        <input @bind="messageInput" size="50" />
+    </label>
+</div>
+<button @onclick="Send" disabled="@(!IsConnected)">Send</button>
+
+<hr>
+
+<ul id="messagesList">
+    @foreach (var message in messages)
+    {
+        <li>@message</li>
+    }
+</ul>
+
+@if (isLoggedIn)
+{
+}
+else
+{
+    <NavLink class="nav-link" href="login"></NavLink>
+}
+
+@code {
+    private const string JWT_Key = nameof(JWT_Key);
+    private HubConnection? hubConnection;
+    private List<string> messages = new List<string>();
+    private string? username;
+    private string? userInput;
+    private bool isLoggedIn = true;
+    private string? messageInput;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/chathub"))
+            .Build();
+
+        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            var encodedMsg = $"{user}: {message}";
+            messages.Add(encodedMsg);
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+    }
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+    //         var jwtToken = await sessionStorage.GetItemAsync<string>(JWT_Key);
+    //         isLoggedIn = !string.IsNullOrWhiteSpace(jwtToken);
+    //         StateHasChanged();
+    //     }
+    // }
+    private async Task LogOutAsync()
+    {
+        await _AuthenticationService.LogoutAsync();
+    }
+
+    private async Task Send()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("SendMessage", userInput, messageInput);
+        }
+    }
+
+    public bool IsConnected =>
+        hubConnection?.State == HubConnectionState.Connected;
+
+    // public async ValueTask DisposeAsync()
+    // {
+    //     if (hubConnection is not null)
+    //     {
+    //         await hubConnection.DisposeAsync();
+    //     }
+    // }
+}
