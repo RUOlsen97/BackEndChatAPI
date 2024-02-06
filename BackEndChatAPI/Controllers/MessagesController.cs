@@ -1,4 +1,5 @@
-﻿using BackEndChatAPI.Repos;
+﻿using BackEndChatAPI.Models;
+using BackEndChatAPI.Repos;
 using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -10,11 +11,17 @@ namespace BackEndChatAPI.Controllers
     public class MessagesController : ControllerBase
     {
         private IMessagesRepo _messagesRepo;
+        public MessagesController(IMessagesRepo messagesRepository)
+        {
+            _messagesRepo = messagesRepository;
+        }
+
         // GET: api/<MessagesController>
         [HttpGet]
-        public IEnumerable<string> Get()
+        public IActionResult GetAllMessages()
         {
-            return new string[] { "value1", "value2" };
+            var messages = _messagesRepo.GetMessages();
+            return Ok(messages);
         }
 
         // GET api/<MessagesController>/5
@@ -26,8 +33,10 @@ namespace BackEndChatAPI.Controllers
 
         // POST api/<MessagesController>
         [HttpPost]
-        public void Post([FromBody] string value)
+        public IActionResult Post([FromBody] Messages newMessages)
         {
+            var messages = _messagesRepo.addMessage(newMessages);
+            return Ok(messages);
         }
 
         // PUT api/<MessagesController>/5

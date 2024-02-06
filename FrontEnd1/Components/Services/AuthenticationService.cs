@@ -23,6 +23,7 @@ namespace FrontEnd1.Components.Services
         private readonly IHttpClientFactory _httpClient;
         private ISessionStorageService _sessionStorageService;
         public const string JWT_Key = nameof(JWT_Key);
+        public const string User = nameof(User);
         public const string REFRESH_KEY = nameof(REFRESH_KEY);
         bool authenticated {  get; set; }
         bool LoggedIn { get; set; }
@@ -89,7 +90,7 @@ namespace FrontEnd1.Components.Services
             {
                 Console.WriteLine(result);
             }
-
+            await _sessionStorageService.SetItemAsync(User, email);
             await _sessionStorageService.SetItemAsync(JWT_Key, accesstoken);
             //await _sessionStorageService.SetItemAsync(REFRESH_KEY, refreshtoken);
             LoginChange?.Invoke(GetUsername(accesstoken));

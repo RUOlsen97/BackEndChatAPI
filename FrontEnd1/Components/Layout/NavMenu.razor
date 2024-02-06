@@ -1,4 +1,6 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@rendermode InteractiveServer
+@using Blazored.SessionStorage
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">FrontEnd1</a>
     </div>
@@ -30,6 +32,31 @@
                 <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Login
             </NavLink>
         </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="firstChat">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> FirstChat
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="profile">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Profile
+            </NavLink>
+        </div>
+        @if (_token is not null)
+        {    
+        }
     </nav>
 </div>
+
+@inject ISessionStorageService sessionStorage;
+@code 
+{
+    private const string JWT_Key = nameof(JWT_Key);
+    public string _token;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(firstRender)
+        _token = await sessionStorage.GetItemAsync<string>(JWT_Key);
+    }
+}
 

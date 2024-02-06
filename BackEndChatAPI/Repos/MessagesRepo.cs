@@ -6,6 +6,7 @@ namespace BackEndChatAPI.Repos
     public class MessagesRepo:IMessagesRepo
     {
         private NewContext _context;
+
         public MessagesRepo(NewContext context)
         {
             _context = context;

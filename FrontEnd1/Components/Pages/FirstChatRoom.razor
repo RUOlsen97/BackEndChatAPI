@@ -1,0 +1,112 @@
+﻿@rendermode InteractiveServer
+@page "/firstChat"
+
+@using Blazored.SessionStorage
+@using FrontEnd1.Components.Models
+@using Microsoft.AspNetCore.SignalR.Client
+@using FrontEnd1.Components.Services;
+@using NuGet.Protocol.Plugins
+@inject ISessionStorageService sessionStorage;
+@inject IAuthenticationService authservice;
+@inject IMessagesService messageService;
+
+
+<h3>FirstChatRoom</h3>
+@if (_token is not null)
+{
+    <span>Welcome <button type="button" @onclick="LogOutAsync">LogOut</button></span>
+    <PageTitle>Profile</PageTitle>
+
+    <div class="form-group">
+        <label>
+            User:
+            <span>@Email</span>
+        </label>
+    </div>
+    <div class="form-group">
+        <label>
+            Message:
+            <input @bind="messageInput" size="50" />
+        </label>
+    </div>
+    <button @onclick="Send" disabled="@(!IsConnected)">Send</button>
+
+    <hr>
+
+    <ul id="messagesList">
+        @foreach (var message in messagesfromdb)
+        {
+            <li>@message.user: @message.text</li>
+        }
+
+        @foreach (var message in messages)
+        {
+            <li>@message</li>
+        }
+    </ul>
+}
+
+@if (errorMessage is not null)
+{
+    <p class="error">@errorMessage</p>
+}
+
+@code {
+    public string _token;
+    public const string User = nameof(User);
+    private string? messageInput;
+    private List<string> messages = new List<string>();
+    private List<getMessagesModel> messagesfromdb;
+    public string? errorMessage;
+    private HubConnection? hubConnection;
+    private const string JWT_Key = nameof(JWT_Key);
+    private string Email;
+    private readonly IHttpClientFactory _httpClient;
+
+    [Inject]
+    private IJSRuntime JsRuntime { get; set; } = null!;
+
+    public bool IsConnected =>
+        hubConnection?.State == HubConnectionState.Connected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7222/chathub")
+            .Build();
+
+        hubConnection.On<string, string>("ReceiveMessage", (Email, message) =>
+        {
+            var encodedMsg = $"{Email}: {message}";
+            messages.Add(encodedMsg);
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+        messagesfromdb = await messageService.GetMessages();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool buttonPressed)
+    {
+        if (buttonPressed)
+        {
+            Email = await sessionStorage.GetItemAsync<string>(User);
+            _token = await sessionStorage.GetItemAsync<string>(JWT_Key);
+
+            buttonPressed = false;
+        }
+    }
+    private async Task LogOutAsync()
+    {
+        await authservice.LogoutAsync();
+    }
+    private async Task Send()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("SendMessage", Email, messageInput);
+            await messageService.SendMessage(0, messageInput, Email, 1);
+        }
+    }
+
+}

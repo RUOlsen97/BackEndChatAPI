@@ -41,8 +41,6 @@ builder.Services.AddResponseCompression(opts =>
           new[] { "application/octet-stream" });
 });
 
-builder.Services.AddScoped<IMessagesRepo, MessagesRepo>();
-
 builder.Services.AddScoped<AuthenticationHandler>();
 
 builder.Services.AddHttpClient("ServerApi").ConfigureHttpClient(c => c.BaseAddress = new Uri("https://localhost:7222" ?? "")).AddHttpMessageHandler<AuthenticationHandler>();
@@ -72,6 +70,7 @@ builder.Services
     .AddBearerToken(IdentityConstants.BearerScheme);
 
 builder.Services.AddScoped<FrontEnd1.Components.Services.IAuthenticationService, FrontEnd1.Components.Services.AuthenticationService>();
+builder.Services.AddScoped<IMessagesService, MessagesService>();
 
 //builder.Services.AddAuthorization(options =>
 //      options.AddPolicy("LoggedIn",

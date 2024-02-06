@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
+using BackEndChatAPI.Repos;
 
 
 string connectionstring = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=aspnet-WebApp1-9a471532-62be-40c6-b4d6-afd15a758cec;Integrated Security=True;Connect Timeout=30;Encrypt=False;Trust Server Certificate=False;Application Intent=ReadWrite;Multi Subnet Failover=False";
@@ -80,6 +81,7 @@ builder.Services.AddAuthorizationBuilder().AddPolicy("api", p =>
 builder.Services.AddDbContext<NewContext>(options => 
     options.UseSqlServer(connectionstring));
 
+builder.Services.AddScoped<IMessagesRepo, MessagesRepo>();
 
 builder.Services.AddIdentityApiEndpoints<IdentityUser>()
         .AddEntityFrameworkStores<NewContext>()
