@@ -1,9 +1,9 @@
 ﻿using BackEndChatAPI.Models;
 
-namespace BackEndChatAPI.IServices
+namespace BackEndChatAPI.Repos
 {
     public interface IUserRepo
     {
-
+        List<Users> GetAllUsers();
     }
 }

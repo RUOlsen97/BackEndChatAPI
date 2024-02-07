@@ -82,8 +82,9 @@ builder.Services.AddDbContext<NewContext>(options =>
     options.UseSqlServer(connectionstring));
 
 builder.Services.AddScoped<IMessagesRepo, MessagesRepo>();
+builder.Services.AddScoped<BackEndChatAPI.Repos.IUserRepo, UserRepo>();
 
-builder.Services.AddIdentityApiEndpoints<IdentityUser>()
+builder.Services.AddIdentityApiEndpoints<Users>()
         .AddEntityFrameworkStores<NewContext>()
         .AddDefaultTokenProviders();
 

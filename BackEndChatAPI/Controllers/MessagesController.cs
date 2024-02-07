@@ -25,10 +25,11 @@ namespace BackEndChatAPI.Controllers
         }
 
         // GET api/<MessagesController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
+        [HttpGet("user")]
+        public async Task <IActionResult> Get(string user)
         {
-            return "value";
+            var messages = await _messagesRepo.GetMessagesByUser(user);
+            return Ok(messages);
         }
 
         // POST api/<MessagesController>

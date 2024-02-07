@@ -5,12 +5,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BackEndChatAPI.context
 {
-    public class NewContext : IdentityDbContext
+    public class NewContext : IdentityDbContext<Users>
     {
         public NewContext(DbContextOptions options) : base(options)
         {
         }
 
         public DbSet<Messages> Messages { get; set; }
+        public DbSet<Users>Users {  get; set; }
     }
 }
