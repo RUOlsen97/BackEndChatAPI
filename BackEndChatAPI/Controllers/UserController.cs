@@ -7,6 +7,7 @@ using BackEndChatAPI.context;
 using BackEndChatAPI.Models;
 using BackEndChatAPI.Repos;
 using Microsoft.AspNetCore.Identity;
+using NuGet.Protocol;
 
 namespace BackEndChatAPI.Controllers
 {
@@ -60,10 +61,12 @@ namespace BackEndChatAPI.Controllers
             }
 
             var result = await _signInManager.PasswordSignInAsync(user, model.Password, model.RememberMe, lockoutOnFailure: false);
+            var token = user.ToJToken();
 
             if (result.Succeeded) 
             {
-                return Ok("Login successful");
+
+                return Ok($"Login successful\nToken:{token}");
             }
             else
             {
