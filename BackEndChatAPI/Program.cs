@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
 using BackEndChatAPI.Repos;
+using Microsoft.AspNetCore.Identity.UI.Services;
 
 
 string connectionstring = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=aspnet-WebApp1-9a471532-62be-40c6-b4d6-afd15a758cec;Integrated Security=True;Connect Timeout=30;Encrypt=False;Trust Server Certificate=False;Application Intent=ReadWrite;Multi Subnet Failover=False";
@@ -73,23 +74,47 @@ builder.Services.AddAuthentication(options =>
             return Task.CompletedTask;
         }
     };
-})/*.AddBearerToken(IdentityConstants.BearerScheme)*/;
+}).AddIdentityServerJwt();/*.AddBearerToken(IdentityConstants.BearerScheme)*/;
 builder.Services.AddAuthorizationBuilder().AddPolicy("api", p =>
 {
     p.RequireAuthenticatedUser();
 });
-builder.Services.AddDbContext<NewContext>(options => 
-    options.UseSqlServer(connectionstring));
+
+builder.Services.AddDbContext<NewContext>(options =>
+options.UseSqlServer(connectionstring));
+
+//builder.Services.AddIdentityApiEndpoints<Users>().AddEntityFrameworkStores<NewContext>();
+
+//builder.Services.AddScoped<IEmailSender, EmailSender>();
+
+builder.Services.AddScoped<SignInManager<Users>>();
+builder.Services.AddScoped<UserManager<Users>>();
 
 builder.Services.AddScoped<IMessagesRepo, MessagesRepo>();
-builder.Services.AddScoped<BackEndChatAPI.Repos.IUserRepo, UserRepo>();
 
-builder.Services.AddIdentityApiEndpoints<Users>()
+builder.Services.AddScoped<IUserRepo, UserRepo>();
+
+builder.Services.AddIdentity<Users, IdentityRole>(options =>
+{
+    options.SignIn.RequireConfirmedEmail = false;
+    options.SignIn.RequireConfirmedPhoneNumber = false;
+    options.SignIn.RequireConfirmedAccount = false;
+})
         .AddEntityFrameworkStores<NewContext>()
-        .AddDefaultTokenProviders();
+        .AddDefaultTokenProviders()
+        .AddDefaultUI();
+
+//builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+//{
+//    options.SignIn.RequireConfirmedAccount = false;
+//})
+//.AddEntityFrameworkStores<NewContext>();
+
+//builder.Services.AddIdentity<Users, IdentityRole>().AddEntityFrameworkStores<NewContext>().AddDefaultTokenProviders();
 
 
 builder.Services.AddSignalR();
+
 builder.Services.AddResponseCompression(opts =>
 {
     opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
@@ -119,13 +144,11 @@ builder.Services.Configure<IdentityOptions>(options =>
 
 builder.Services.AddMvc();
 
-builder.Services.AddAuthentication()
-    .AddIdentityServerJwt();
 builder.Services.TryAddEnumerable(
     ServiceDescriptor.Singleton<IPostConfigureOptions<JwtBearerOptions>,
         ConfigureJwtBearerOptions>());
 
-// Code removed for brevity.
+
 
 var app = builder.Build();
 
@@ -148,9 +171,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapIdentityApi<IdentityUser>();
+//app.MapIdentityApi<Users>();
 
-app.MapGet("/", () => "Hello, World!");
 app.MapGet("/secret", (ClaimsPrincipal user) => $"Hello {user.Identity?.Name}. My secret")
     .RequireAuthorization();
 

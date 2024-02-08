@@ -1,0 +1,82 @@
+﻿@rendermode InteractiveServer
+@page "/gruppe"
+@using FrontEnd1.Components.Models
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager NavManager
+
+<h3>gruppe</h3>
+
+<input @bind="model.UserName" />
+<input @bind="model.ChatRoom" />
+<button @onclick="JoinGroup">Join Group</button>
+<input @bind="message" />
+<button @onclick="SendToGroup">Send to group</button>
+
+<ul id="messagesList">
+    @if (messagesList.Count != 0)
+    {
+        @foreach (string messageT in messagesList)
+        {
+            <li>@messageT</li>            
+        }
+    }
+</ul>
+
+@code {
+
+    private HubConnection hubConnection;
+    private string groupName;
+    private string message;
+    bool joined;
+    public UserConnection model = new UserConnection();
+    private List<string> messagesList = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavManager.ToAbsoluteUri("/chathub"))
+            .Build();
+
+        // hubConnection.On<string>("Send", message =>
+        // {
+        //     // Håndter meddelelsen modtaget fra serveren
+        // });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task JoinGroup()
+    {
+        try
+        {
+            hubConnection.On<string, string>("ReceiveMessage", async (admin, message) =>
+            {
+                var encodedMsg = $"{admin}: {message}";
+                messagesList.Add(encodedMsg);
+                InvokeAsync(StateHasChanged);
+            });
+
+            await hubConnection.InvokeAsync("AddToGroup", model);
+
+            model.IsConnected = true;
+
+            // Håndter succesfuld tilslutning
+        }
+        catch (Exception ex)
+        {
+            // Håndter fejl
+        }
+    }
+    private async Task RemoveFromGroup()
+    {
+        await hubConnection.InvokeAsync("RemoveFromGroup", model.ChatRoom);
+    }
+    private async Task SendToGroup()
+    {
+        await hubConnection.InvokeAsync("SendMessageToGroup", model.ChatRoom, model.UserName, message);
+        // var encodedMsg = $"{model.UserName}: {message}";
+        // messagesList.Add(encodedMsg);
+
+
+    }
+}

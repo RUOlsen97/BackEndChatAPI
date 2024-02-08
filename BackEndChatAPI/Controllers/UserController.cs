@@ -18,12 +18,17 @@ namespace BackEndChatAPI.Controllers
         private IUserRepo _repo;
         private NewContext _context;
         private ILoginService _loginService;
+        //private Users _user;
+        //private Users _user;
         private readonly UserManager<Users> _userManager;
+        private readonly SignInManager<Users> _signInManager;
 
-        public UserController(IUserRepo repo, UserManager<Users> userManager)
+        public UserController(IUserRepo repo, UserManager<Users> userManager, SignInManager<Users> signInManager)
         {
             _repo = repo;
             _userManager = userManager;
+            _signInManager = signInManager;
+            //_user = user;
         }
 
         [HttpGet]
@@ -45,5 +50,27 @@ namespace BackEndChatAPI.Controllers
 
             return Ok(user);
         }
+        [HttpPost("login")]
+        public async Task<ActionResult> Login(LoginViewModel model) 
+        {
+            var user = await _userManager.FindByNameAsync(model.UserName);
+            if (user == null) 
+            {
+                return Unauthorized(); 
+            }
+
+            var result = await _signInManager.PasswordSignInAsync(user, model.Password, model.RememberMe, lockoutOnFailure: false);
+
+            if (result.Succeeded) 
+            {
+                return Ok("Login successful");
+            }
+            else
+            {
+                return Unauthorized();
+            }
+
+        }
+
     }
 }
