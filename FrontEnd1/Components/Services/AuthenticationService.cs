@@ -59,14 +59,21 @@ namespace FrontEnd1.Components.Services
             var jwt = new JwtSecurityToken(token);
             return jwt.Claims.First(c => c.Type == ClaimTypes.Email).Value;
         }
-        public async Task<DateTime> LoginAsync(string email, string password)
+        public async Task <string>LoginAsync(string email, string password)
         {
-            
+            bool rememberMe = true;
             using var client = _httpClient.CreateClient();
 
-            var uri = new Uri("https://localhost:7222/login");
+            var uri = new Uri("https://localhost:7222/api/User/login");
+            var loginData = new
+            {
+                userName = email,
+                password = password,
+                rememberMe = rememberMe
+            };
 
-            var json = $"{{\"email\":\"{email}\",\"password\":\"{password}\", \"twoFactorCode\": \"string\",\"twoFactorRecoveryCode\": \"string\"}}";
+            var json = JsonSerializer.Serialize(loginData);
+            //var json = $"{{\"userName\":\"{email}\",\"password\":\"{password}\", \"rememberMe\": \"{rememberMe}\"}}";
 
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             _loginResponse = await client.PostAsync(uri, content);
@@ -82,18 +89,19 @@ namespace FrontEnd1.Components.Services
             //{
             //    throw new InvalidDataException();
             //}
-            string accesstoken = jsonresponse["accessToken"].ToString();
+            string accesstoken = jsonresponse["token"].ToString();
             //string refreshtoken = jsonresponse["refreshToken"].ToString();
-            string expiresIn = jsonresponse["expiresIn"].ToString();
+            //string expiresIn = jsonresponse["expiresIn"].ToString();
 
-            if (DateTime.TryParse(expiresIn, out DateTime result))
-            {
-                Console.WriteLine(result);
-            }
+            //if (DateTime.TryParse(expiresIn, out DateTime result))
+            //{
+            //    Console.WriteLine(result);
+            //}
             await _sessionStorageService.SetItemAsync(User, email);
             await _sessionStorageService.SetItemAsync(JWT_Key, accesstoken);
             //await _sessionStorageService.SetItemAsync(REFRESH_KEY, refreshtoken);
-            LoginChange?.Invoke(GetUsername(accesstoken));
+            //LoginChange?.Invoke(GetUsername(accesstoken));
+            string result = $"{email} is logged in";
             return result;
 
         }

@@ -1,5 +1,6 @@
 ﻿using BackEndChatAPI.context;
 using BackEndChatAPI.Models;
+using BackEndChatAPI.Repos.Interface;
 
 namespace BackEndChatAPI.Repos
 {
@@ -11,9 +12,15 @@ namespace BackEndChatAPI.Repos
         {
             _context = context;
         }
-        public List<Users> GetAllUsers()
+        public List<User> GetAllUsers()
         {
-            return _context.Set<Users>().ToList();
+            return _context.Set<User>().ToList();
+        }
+        public User Adduser(User newUser)
+        {
+            _context.User.Add(newUser);
+            _context.SaveChanges();
+            return newUser;
         }
     }
 }

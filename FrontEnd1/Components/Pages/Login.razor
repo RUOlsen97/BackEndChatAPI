@@ -28,7 +28,7 @@
 
 @inject IAuthenticationService AuthenticationService;
 
-<fieldset disabled="@(expiration is not null)">
+<fieldset disabled="@(result is not null)">
     <EditForm Model="@model" OnValidSubmit="SubmitAsync" FormName="login">
         <div>
             <label for="email">Username:</label>
@@ -40,6 +40,9 @@
         </div>
         <div>
             <button type="submit">Login</button>
+        </div>
+        <div>
+            <p>@result</p>
         </div>
     </EditForm>
 </fieldset>
@@ -74,7 +77,7 @@
     private const string JWT_Key = nameof(JWT_Key);
     private const string REFRESH_KEY = nameof(REFRESH_KEY);
     // private string? _jwtCache;
-    private DateTime? expiration;
+    private string? result;
     private bool Authenticated = false;
     [Inject]
     private IJSRuntime JsRuntime { get; set; } = null!;
@@ -94,7 +97,7 @@
     {
         // await JsRuntime.InvokeVoidAsync("LoginAsync", Email, Password);
 
-        expiration = await AuthenticationService.LoginAsync(this.Email, this.Password);
+        result = await AuthenticationService.LoginAsync(this.Email, this.Password);
         errorMessage = null;
         await AuthenticationService.Authenticate(Authenticated);
         buttonPressed = true;

@@ -8,7 +8,7 @@ namespace FrontEnd1.Components.Services
 
         Task<bool> Authenticate(bool authenticated);
         ValueTask<string> GetJwtAsync();
-        Task<DateTime> LoginAsync(string email, string password);
+        Task<string> LoginAsync(string email, string password);
         Task OnAfterRenderAsync();
         string GetUsername(string token);
         Task LogoutAsync();

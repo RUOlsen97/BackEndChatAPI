@@ -21,6 +21,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
 using BackEndChatAPI.Repos;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using BackEndChatAPI.Repos.Interface;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 
 string connectionstring = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=aspnet-WebApp1-9a471532-62be-40c6-b4d6-afd15a758cec;Integrated Security=True;Connect Timeout=30;Encrypt=False;Trust Server Certificate=False;Application Intent=ReadWrite;Multi Subnet Failover=False";
@@ -41,6 +44,16 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(options =>
 {
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes("YourVeryLongAndComplexSecretKeyHere")),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ClockSkew = TimeSpan.Zero
+    };
     // Configure the Authority to the expected value for
     // the authentication provider. This ensures the token
     // is appropriately validated.
@@ -87,14 +100,14 @@ options.UseSqlServer(connectionstring));
 
 //builder.Services.AddScoped<IEmailSender, EmailSender>();
 
-builder.Services.AddScoped<SignInManager<Users>>();
-builder.Services.AddScoped<UserManager<Users>>();
+builder.Services.AddScoped<SignInManager<User>>();
+builder.Services.AddScoped<UserManager<User>>();
 
 builder.Services.AddScoped<IMessagesRepo, MessagesRepo>();
 
 builder.Services.AddScoped<IUserRepo, UserRepo>();
 
-builder.Services.AddIdentity<Users, IdentityRole>(options =>
+builder.Services.AddIdentity<User, IdentityRole>(options =>
 {
     options.SignIn.RequireConfirmedEmail = false;
     options.SignIn.RequireConfirmedPhoneNumber = false;
@@ -103,6 +116,11 @@ builder.Services.AddIdentity<Users, IdentityRole>(options =>
         .AddEntityFrameworkStores<NewContext>()
         .AddDefaultTokenProviders()
         .AddDefaultUI();
+
+builder.Services.AddScoped<ITokenService, TokenService>();
+
+builder.Services.AddScoped<UserManager<User>>();
+builder.Services.AddScoped<RoleManager<IdentityRole>>();
 
 //builder.Services.AddDefaultIdentity<IdentityUser>(options =>
 //{
@@ -151,6 +169,8 @@ builder.Services.TryAddEnumerable(
 
 
 var app = builder.Build();
+
+//SeedData.Initialize(app.Services, UserManager<User>(), ).Wait();
 
 app.UseResponseCompression();
 

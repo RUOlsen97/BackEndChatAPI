@@ -1,5 +1,6 @@
 ﻿using BackEndChatAPI.context;
 using BackEndChatAPI.Models;
+using BackEndChatAPI.Repos.Interface;
 using Microsoft.AspNetCore.Identity;
 using System.Data.Entity;
 
@@ -8,9 +9,9 @@ namespace BackEndChatAPI.Repos
     public class MessagesRepo:IMessagesRepo
     {
         private NewContext _context;
-        private readonly UserManager<Users> _userManager;
+        private readonly UserManager<User> _userManager;
 
-        public MessagesRepo(NewContext context, UserManager<Users> userManager)
+        public MessagesRepo(NewContext context, UserManager<User> userManager)
         {
             _context = context;
             _userManager = userManager;

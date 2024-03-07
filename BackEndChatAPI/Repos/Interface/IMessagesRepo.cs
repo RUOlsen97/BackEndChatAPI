@@ -1,6 +1,6 @@
 ﻿using BackEndChatAPI.Models;
 
-namespace BackEndChatAPI.Repos
+namespace BackEndChatAPI.Repos.Interface
 {
     public interface IMessagesRepo
     {
