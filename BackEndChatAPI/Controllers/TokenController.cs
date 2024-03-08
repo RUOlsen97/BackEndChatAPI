@@ -10,14 +10,16 @@ namespace BackEndChatAPI.Controllers
         {
             _tokenService = tokenService;
         }
+
         [HttpGet("RoleIssuer")]
-        public async Task<ActionResult> IssueRoleOnValidToken(string token)
+        public async Task<ActionResult> ValidateToken(string token)
         {
-            string role = _tokenService.ValidateJwtToken(token);
-            if (role == null)
+            string? role = await _tokenService.ValidateJwtToken(token);
+            if (role == "")
             {
                 return BadRequest();
             }
+
             return Ok(role);
         }
     }

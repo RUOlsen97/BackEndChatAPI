@@ -4,8 +4,8 @@ namespace BackEndChatAPI.IServices
 {
     public interface ITokenService
     {
-        string GenerateJwtToken(Models.User user);
-        string? ValidateJwtToken(string token);
+        Task<string> GenerateJwtToken(Models.User user);
+        Task<string?> ValidateJwtToken(string token);
 
     }
 }

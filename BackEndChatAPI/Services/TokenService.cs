@@ -7,28 +7,36 @@ using Microsoft.Identity.Client;
 using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.Data.Common;
-using static CodeFirstDb.ChatWebAppContext;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using BackEndChatAPI.context;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace BackEndChatAPI.Services
 {
     public class TokenService : ITokenService
     {
-        public TokenService(NewContext context)
+        private UserManager<User> _userManager;
+        private RoleManager<User> _roleManager;
+
+        public TokenService(NewContext context, UserManager<Models.User> userManager, RoleManager<User> roleManager = null, TokenHandler tokenHandler = null)
         {
             _context = context;
+            _userManager = userManager;
+            _roleManager = roleManager;
         }
         public Models.User getUser = new Models.User();
         private readonly NewContext _context;
 
         
-        public string GenerateJwtToken(Models.User user)
-        {
+        public async Task<string> GenerateJwtToken(Models.User user)
+        {   
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes("YourVeryLongAndComplexSecretKeyHere"); // Replace with your secret key
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()) }),
@@ -36,13 +44,14 @@ namespace BackEndChatAPI.Services
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
+
             return tokenHandler.WriteToken(token);
         }
 
-        public string? ValidateJwtToken(string token)
+        public async Task<string?> ValidateJwtToken(string token)
         {
             if (token == null)
-                return null;
+                return "";
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes("YourVeryLongAndComplexSecretKeyHere");
@@ -58,13 +67,20 @@ namespace BackEndChatAPI.Services
                 }, out SecurityToken validatedToken);
 
                 var jwtToken = (JwtSecurityToken)validatedToken;
-                var userId = jwtToken.Claims.First(x => x.Type == ClaimTypes.Role).Value;
+                var userid = jwtToken.Claims.FirstOrDefault(x => x.Type == "nameid")?.Value;
 
-                return userId;
+                var user = await _userManager.FindByIdAsync(userid);
+                if (user == null)
+                {
+                    return "";
+                }
+                var roles = await _userManager.GetRolesAsync(user);
+
+                return roles[0];
             }
             catch
             {
-                return null;
+                return "";
             }
         }
     }

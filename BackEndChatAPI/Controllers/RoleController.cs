@@ -13,6 +13,7 @@ namespace BackEndChatAPI.Controllers
             _roleManager = rolemanager;
             _userManager = userManager;
         }
+
         [HttpPost("CreateRole")]
         public async Task<ActionResult> CreateRole(string role, string roleid)
         {
